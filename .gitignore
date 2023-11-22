@@ -1,5 +1,7 @@
 # User specific files
 data/
+results/
+parallel_venv/
 
 # PyBuilder
 .pybuilder/
