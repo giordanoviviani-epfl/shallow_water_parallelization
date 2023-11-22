@@ -1,0 +1,15 @@
+# This file contains the configuration parameters for the simulation
+# The parameters are:
+#   - G: Gravity in km/hr2 (9.82 * (3600**2) / 1000)
+#   - MapSize: Size of the map in km
+#   - Nx: Number of cells in each direction on the grid
+#   - Tend: End time in hours
+#   - path_to_file: Path to the data folder
+#   - path_to_save: Path to the results folder
+
+G: 127267.2000 
+MapSize: 500 
+Nx: 2001 
+Tend: 0.2 
+path_to_data: "../data"
+path_to_results: "../results"
