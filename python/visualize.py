@@ -127,6 +127,7 @@ def plot_initial_and_final_conditions(**plot_kwargs):
     MapSize = config['MapSize']
     Nx = config['Nx']
     Tend = config['Tend']
+    number_of_processes = config['number_of_processes']
 
     DeltaX = MapSize / Nx # Grid spacing
 
@@ -138,7 +139,7 @@ def plot_initial_and_final_conditions(**plot_kwargs):
     path_to_human_results.mkdir(parents=True, exist_ok=True)
 
     data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}_h.bin"
-    solution_file = path_to_results / f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.bin'
+    solution_file = path_to_results / f'Solution_nx{Nx}_{MapSize}km_T{Tend}_nprocess{number_of_processes}_h.bin'
 
     # Retieve topography
     topo = np.fromfile(open(path_to_data / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype='double').reshape((Nx, Nx)).T
