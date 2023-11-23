@@ -115,8 +115,9 @@ def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_wave
             save_name += f'_{tag}'
         save_name += f"_{map_size}km_nx{nx}_cstride{cstride}_rstride{rstride}"
         if highlight_waves:
-            save_name += '_highlight_waves.png'
-
+            save_name += '_highlight_waves'
+        save_name += '.png'
+        
         save_complete_path = save_path / save_name
         print(f'Saving plot: {save_complete_path.stem}')
         fig.savefig(save_complete_path, dpi=200, format='png', bbox_inches='tight')
