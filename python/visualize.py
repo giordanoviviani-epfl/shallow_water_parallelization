@@ -117,7 +117,7 @@ def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_wave
         if highlight_waves:
             save_name += '_highlight_waves'
         save_name += '.png'
-        
+
         save_complete_path = save_path / save_name
         print(f'Saving plot: {save_complete_path.stem}')
         fig.savefig(save_complete_path, dpi=200, format='png', bbox_inches='tight')
@@ -127,8 +127,9 @@ def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_wave
 
 def plot_tsunami_from_file(path_file, **plot_kwargs):
 
-    find_number_prefix = lambda string, prefix: re.findall(r'%s\d+' % prefix, string)
-    find_number_suffix = lambda string, suffix: re.findall(r'\d+%s' % suffix, string)
+    # Source https://stackoverflow.com/questions/48600143/find-number-after-a-substring-in-string
+    find_number_prefix = lambda string, prefix: re.findall(r'%s(\d+)' % prefix, string)
+    find_number_suffix = lambda string, suffix: re.findall(r'(\d+)%s' % suffix, string)
 
     ## Get file name
     path_file = Path(path_file)
@@ -139,7 +140,7 @@ def plot_tsunami_from_file(path_file, **plot_kwargs):
 
     ## Load data
     water_level = np.fromfile(open(path_file, 'rb'), dtype=np.double).reshape((Nx, Nx))
-    topo = np.fromfile(open(path_file.parent / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
+    topo = np.fromfile(open(path_file.parent.parent/ "data" / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
 
     return plot_tsunami(water_level, MapSize, Nx, topo, **plot_kwargs)
 
