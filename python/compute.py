@@ -22,12 +22,14 @@ DeltaX = MapSize / Nx # Grid spacing
 
 path_to_data = current_file_position / config['path_to_data']
 path_to_results = current_file_position/ config['path_to_results']
+path_to_human_results = path_to_results / 'human'
 path_to_data.mkdir(parents=True, exist_ok=True)
 path_to_results.mkdir(parents=True, exist_ok=True)
+path_to_human_results.mkdir(parents=True, exist_ok=True)
 
 filename =f"Data_nx{Nx}_{MapSize}km_T{Tend}"
 solution_file = path_to_results /f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.bin'
-solution_txt = path_to_results /f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.txt'
+solution_txt = path_to_human_results / f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.txt'
 
 ## Load the data
 # Initial conditions

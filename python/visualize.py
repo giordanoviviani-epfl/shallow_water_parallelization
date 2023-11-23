@@ -132,8 +132,10 @@ def plot_initial_and_final_conditions(**plot_kwargs):
 
     path_to_data = current_file_position / config['path_to_data']
     path_to_results = current_file_position/ config['path_to_results']
+    path_to_human_results = path_to_results / 'human'
     path_to_data.mkdir(parents=True, exist_ok=True)
     path_to_results.mkdir(parents=True, exist_ok=True)
+    path_to_human_results.mkdir(parents=True, exist_ok=True)
 
     data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}_h.bin"
     solution_file = path_to_results / f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.bin'
@@ -148,7 +150,7 @@ def plot_initial_and_final_conditions(**plot_kwargs):
         plot_kw = {'title': 'Initial conditions'}
         plot_kwargs.update(plot_kw)
         fig, ax, name_ext = plot_tsunami(H_initial_cond, MapSize, Nx, topo, **plot_kwargs)
-        fig.savefig(path_to_results / f'Initial_condition_{name_ext}_T{Tend}.pdf', bbox_inches='tight')
+        fig.savefig(path_to_human_results / f"Initial_condition_{name_ext}_T{str(Tend).split('.')[1]}.png", dpi=200, format='png', bbox_inches='tight')
     else:
         print(f'Did not find: {data_file}. Check your data paths.')
     plots.append([fig, ax, name_ext])
@@ -159,7 +161,7 @@ def plot_initial_and_final_conditions(**plot_kwargs):
         plot_kw = {'title': 'Result of the simulation'}
         plot_kwargs.update(plot_kw)
         fig, ax, name_ext = plot_tsunami(H_solution, MapSize, Nx, topo, **plot_kwargs)
-        fig.savefig(path_to_results / f'Result_{name_ext}_T{Tend}.pdf', bbox_inches='tight')
+        fig.savefig(path_to_human_results / f"Result_{name_ext}_T{str(Tend).split('.')[1]}.png", dpi=200, format='png', bbox_inches='tight')
     else:
         print(f'Did not find: {solution_file}. Did you remember to run compute.py file ?')
     plots.append([fig, ax, name_ext])
