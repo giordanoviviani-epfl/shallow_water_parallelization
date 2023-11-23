@@ -1,12 +1,14 @@
 import numpy as np
 import yaml
+import re
 from pathlib import Path
 from matplotlib import colors
 from matplotlib import cm
 from matplotlib.colors import LightSource
 import matplotlib.pyplot as plt
 
-def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_waves=False, cstride=20, rstride=20):
+def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_waves=False, cstride=20, rstride=20,
+                  save=False, save_path=None, save_name='Result', tag='', return_fig=False):
 
     fontsize = 12
     mag_factor_z = 10
@@ -108,66 +110,106 @@ def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_wave
     ax.set_zlabel('Elevation [km]', fontweight='bold', labelpad=5, fontsize=fontsize)  # Adjust labelpad to reduce spacing
     plt.draw()
 
-    name_ext = f'MapSize{map_size}km_Nx{nx}_cstride{cstride}_rstride{rstride}'
-    if highlight_waves:
-        name_ext += '_highlight_waves'
-    
+    if save: 
+        if tag != '':
+            save_name += f'_{tag}'
+        save_name += f"_{map_size}km_nx{nx}_cstride{cstride}_rstride{rstride}"
+        if highlight_waves:
+            save_name += '_highlight_waves.png'
 
-    return fig, ax, name_ext
+        save_complete_path = save_path / save_name
+        print(f'Saving plot: {save_complete_path.stem}')
+        fig.savefig(save_complete_path, dpi=200, format='png', bbox_inches='tight')
 
-def plot_initial_and_final_conditions(**plot_kwargs):
+    if return_fig:    
+        return fig, ax
 
-    ## Import the config file and set the parameters
-    current_file_position = Path(__file__).resolve().parent
-    config_file = current_file_position / 'config.yaml'
-    with open(config_file) as f:
-        config = yaml.safe_load(f)
+def plot_tsunami_from_file(path_file, **plot_kwargs):
 
-    G = config['G']
-    MapSize = config['MapSize']
-    Nx = config['Nx']
-    Tend = config['Tend']
-    number_of_processes = config['number_of_processes']
+    find_number_prefix = lambda string, prefix: re.findall(r'%s\d+' % prefix, string)
+    find_number_suffix = lambda string, suffix: re.findall(r'\d+%s' % suffix, string)
 
-    DeltaX = MapSize / Nx # Grid spacing
+    ## Get file name
+    path_file = Path(path_file)
+    file_name = path_file.stem
 
-    path_to_data = current_file_position / config['path_to_data']
-    path_to_results = current_file_position/ config['path_to_results']
-    path_to_human_results = path_to_results / 'human'
-    path_to_data.mkdir(parents=True, exist_ok=True)
-    path_to_results.mkdir(parents=True, exist_ok=True)
-    path_to_human_results.mkdir(parents=True, exist_ok=True)
+    Nx = int(find_number_prefix(file_name, 'nx')[0])
+    MapSize = int(find_number_suffix(file_name, 'km')[0])
 
-    data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}_h.bin"
-    solution_file = path_to_results / f'Solution_nx{Nx}_{MapSize}km_T{Tend}_nprocess{number_of_processes}_h.bin'
+    ## Load data
+    water_level = np.fromfile(open(path_file, 'rb'), dtype=np.double).reshape((Nx, Nx))
+    topo = np.fromfile(open(path_file.parent / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
 
-    # Retieve topography
-    topo = np.fromfile(open(path_to_data / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype='double').reshape((Nx, Nx)).T
-    plots = []
-    # Plot initial condition
-    if data_file.exists():
-        print(f'Plotting initial condition from {data_file}')
-        H_initial_cond = np.fromfile(open(data_file, 'rb'), dtype='double').reshape((Nx, Nx)).T
-        plot_kw = {'title': 'Initial conditions'}
-        plot_kwargs.update(plot_kw)
-        fig, ax, name_ext = plot_tsunami(H_initial_cond, MapSize, Nx, topo, **plot_kwargs)
-        fig.savefig(path_to_human_results / f"Initial_condition_{name_ext}_T{str(Tend).split('.')[1]}.png", dpi=200, format='png', bbox_inches='tight')
-    else:
-        print(f'Did not find: {data_file}. Check your data paths.')
-    plots.append([fig, ax, name_ext])
-    # Plot solution state at Tend
-    if solution_file.exists():
-        print(f'Plotting solution from {solution_file}')
-        H_solution = np.fromfile(open(solution_file, 'rb'), dtype='double').reshape((Nx, Nx)).T
-        plot_kw = {'title': 'Result of the simulation'}
-        plot_kwargs.update(plot_kw)
-        fig, ax, name_ext = plot_tsunami(H_solution, MapSize, Nx, topo, **plot_kwargs)
-        fig.savefig(path_to_human_results / f"Result_{name_ext}_T{str(Tend).split('.')[1]}.png", dpi=200, format='png', bbox_inches='tight')
-    else:
-        print(f'Did not find: {solution_file}. Did you remember to run compute.py file ?')
-    plots.append([fig, ax, name_ext])
+    return plot_tsunami(water_level, MapSize, Nx, topo, **plot_kwargs)
 
-    return plots
+def cartesian_grid(map_size, nx, dimensions_cartesian2d, local_size_array, slices_array, n_ghosts_array, cart_coords_array, ghost_corrected_offset_array, save_path): 
 
-if __name__ == '__main__':
-    plot_initial_and_final_conditions(highlight_waves=True)
+    size = dimensions_cartesian2d[0] * dimensions_cartesian2d[1]
+    print(f"Plotting cartesian grid size={size}: ", flush=True, end='')
+
+    height_ratios = np.ones(dimensions_cartesian2d[0], dtype=np.int32)
+    width_ratios = np.ones(dimensions_cartesian2d[1], dtype=np.int32)
+
+    # Plot the cartesian grid
+    figsize = (dimensions_cartesian2d[1]*4, dimensions_cartesian2d[0]*4)
+    fig, axs = plt.subplots(dimensions_cartesian2d[0], dimensions_cartesian2d[1], figsize=figsize, sharex=True, sharey=True, gridspec_kw={'height_ratios': height_ratios, 'width_ratios': width_ratios})
+    for i_ax, ax in enumerate(axs.flat):
+        matrix = np.zeros((nx, nx))
+        matrix[slices_array[i_ax][0], slices_array[i_ax][1]] = 1 # Set entire collected matrix to 1
+        
+        submatrix_dims = np.array((matrix[slices_array[i_ax][0], slices_array[i_ax][1]]).shape)
+        thickness_ghosts = submatrix_dims // 50
+        # Get the ghost lines
+        # Ghost rows
+        row_index_ghost, col_index_ghost = [], []
+        if n_ghosts_array[i_ax][0] == 1:
+            if cart_coords_array[i_ax][0] == 0:
+                matrix[slices_array[i_ax][0], slices_array[i_ax][1]][-thickness_ghosts[0]:, :] = -1
+                row_index_ghost.append(ghost_corrected_offset_array[i_ax][0] + submatrix_dims[0] - 1)
+            else:
+                matrix[slices_array[i_ax][0], slices_array[i_ax][1]][0:thickness_ghosts[0]:, :] = -1
+                row_index_ghost.append(ghost_corrected_offset_array[i_ax][0])
+
+        elif n_ghosts_array[i_ax][0] == 2:
+            matrix[slices_array[i_ax][0], slices_array[i_ax][1]][0:thickness_ghosts[0], :] = -1
+            matrix[slices_array[i_ax][0], slices_array[i_ax][1]][-thickness_ghosts[0]:, :] = -1
+            row_index_ghost.extend((ghost_corrected_offset_array[i_ax][0], ghost_corrected_offset_array[i_ax][0] + submatrix_dims[0] - 1))
+
+        elif n_ghosts_array[i_ax][0] == 0:
+            col_index_ghost.append(None)
+
+        else:
+            raise ValueError(f'ghosts_array[{i_ax}][0] must be either 1 or 2, but it is {n_ghosts_array[i_ax][0]}')
+        # Ghost columns
+        if n_ghosts_array[i_ax][1] == 1:
+            if cart_coords_array[i_ax][1] == 0:
+                matrix[slices_array[i_ax][0], slices_array[i_ax][1]][:, -thickness_ghosts[1]:] = -1
+                col_index_ghost.append(ghost_corrected_offset_array[i_ax][1] + submatrix_dims[1] - 1)
+            else:
+                matrix[slices_array[i_ax][0], slices_array[i_ax][1]][:, 0:thickness_ghosts[1]] = -1
+                col_index_ghost.append(ghost_corrected_offset_array[i_ax][1])
+
+        elif n_ghosts_array[i_ax][1] == 2:
+            matrix[slices_array[i_ax][0], slices_array[i_ax][1]][:, -thickness_ghosts[1]:] = -1
+            matrix[slices_array[i_ax][0], slices_array[i_ax][1]][:, 0:thickness_ghosts[1]] = -1
+            col_index_ghost.extend((ghost_corrected_offset_array[i_ax][1], ghost_corrected_offset_array[i_ax][1] + submatrix_dims[1] - 1))
+
+        elif n_ghosts_array[i_ax][1] == 0:
+            col_index_ghost.append(None)
+
+        else:
+            raise ValueError(f'ghosts_array[{i_ax}][1] must be either 1 or 2 or 0, but it is {n_ghosts_array[i_ax][1]}')
+
+        ax.imshow(matrix, cmap='RdBu', vmin=-1.5, vmax=1.5, origin='upper', extent=[0, map_size, map_size, 0])
+
+        yrange = [ghost_corrected_offset_array[i_ax][0], ghost_corrected_offset_array[i_ax][0] + local_size_array[i_ax][0]-1]
+        xrange = [ghost_corrected_offset_array[i_ax][1], ghost_corrected_offset_array[i_ax][1] + local_size_array[i_ax][1]-1]  
+        ax.set_xlabel(f'West-East [km]\n gcol {col_index_ghost} \n {xrange}', labelpad=1, fontsize=10)
+        ax.set_ylabel(f'North-South [km]\n grow {row_index_ghost} \n {yrange}', labelpad=1, fontsize=10)
+        ax.set_title(f'rank: {i_ax}\ncoord: {cart_coords_array[i_ax]}', fontweight='bold', fontsize=12)
+        print(f' {i_ax+1} ', flush=True, end='')
+
+    #Save the plot
+    plt.tight_layout()
+    print(f'\nSaving cartesian grid plot: {save_path.name}')
+    fig.savefig(save_path, format='pdf')

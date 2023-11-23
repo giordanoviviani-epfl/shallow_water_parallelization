@@ -13,5 +13,6 @@ Nx: 2001
 Tend: 0.2 
 path_to_data: "../data"
 path_to_results: "../results"
-number_of_processes: 4
+number_of_processes: 1
+run_tag: ""
 

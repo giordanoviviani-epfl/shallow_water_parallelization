@@ -1,6 +1,7 @@
 ## Import libraries
 import numpy as np
 from pathlib import Path
+import visualize as vis
 import time
 import yaml
 
@@ -8,38 +9,46 @@ import yaml
 start_time = time.time()
 
 ## Import the config file and set the parameters
+# Read yaml file
 current_file_position = Path(__file__).resolve().parent
 config_file = current_file_position / 'config.yaml'
 with open(config_file) as f:
     config = yaml.safe_load(f)
 
+# Get parameters
 G = config['G']
 MapSize = config['MapSize']
 Nx = config['Nx']
 Tend = config['Tend']
-
+number_of_processes = config['number_of_processes']
+run_tag = config['run_tag']
 DeltaX = MapSize / Nx # Grid spacing
 
+# Create paths
 path_to_data = current_file_position / config['path_to_data']
 path_to_results = current_file_position/ config['path_to_results']
-path_to_human_results = path_to_results / 'human'
+path_to_human_results = path_to_results / "human"
 path_to_data.mkdir(parents=True, exist_ok=True)
 path_to_results.mkdir(parents=True, exist_ok=True)
 path_to_human_results.mkdir(parents=True, exist_ok=True)
 
-filename =f"Data_nx{Nx}_{MapSize}km_T{Tend}"
-solution_file = path_to_results /f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.bin'
-solution_txt = path_to_human_results / f'Solution_nx{Nx}_{MapSize}km_T{Tend}_h.txt'
+# Create filenames
+data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}"
+solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.bin"
+solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.txt"
+if run_tag != '':
+    solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.bin"
+    solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.txt"
 
 ## Load the data
 # Initial conditions
-h = np.fromfile(open(path_to_data/ (filename+"_h.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
-hu = np.fromfile(open(path_to_data/ (filename+"_hu.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
-hv = np.fromfile(open(path_to_data/ (filename+"_hv.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
+h = np.fromfile(open(data_file.with_name(data_file.name + "_h.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
+hu = np.fromfile(open(data_file.with_name(data_file.name + "_hu.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
+hv = np.fromfile(open(data_file.with_name(data_file.name + "_hv.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
 
 # Topography
-zdx = np.fromfile(open(path_to_data/ (filename+"_Zdx.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
-zdy = np.fromfile(open(path_to_data/ (filename+"_Zdy.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
+zdx = np.fromfile(open(data_file.with_name(data_file.name + "_Zdx.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
+zdy = np.fromfile(open(data_file.with_name(data_file.name + "_Zdy.bin"), "rb"), dtype=np.double).reshape(Nx,Nx).T
 
 ## Initialize empty arrays for the values on the grid (t = temporary)
 ht = np.zeros((Nx,Nx))
@@ -69,7 +78,7 @@ while Tn < Tend:
 
     # Report Status
     if n_steps % 10 == 0:
-        print(f'{n_steps:04d} - Computing T: {Tn + dT} ({100 * (Tn + dT) / Tend}%) - dT: {dT} hr ')
+        print(f'{n_steps:04d} - Computing T: {Tn + dT} ({100 * (Tn + dT) / Tend}%) - dT: {dT} hr - exc. time {time.time() - start_time}')
 
     # Copy solution to temporary variables
     ht = h.copy()
@@ -149,7 +158,7 @@ print(new_gflops_str)
 
 # Save solution to txt file
 with open(solution_txt, 'w') as f:
-    f.write(solution_file.__str__() + '\n')
+    f.write(solution_file.stem.__str__() + '\n')
     f.write(time_str + '\n')
     f.write(old_gflops_str + '\n')
     f.write(new_gflops_str + '\n\n')
@@ -162,5 +171,22 @@ with open(solution_txt, 'w') as f:
     f.write(f'DeltaX: {DeltaX} km\n')
     f.write(f'Tend: {Tend} hr\n')
 
-    f.write(f'Data file: {filename}\n')
+    f.write(f'Data file: {data_file.stem}\n')
 
+## Plot final conditions
+Topology = np.fromfile(open(path_to_data / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
+vis.plot_tsunami(h_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
+                    save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
+                    highlight_waves=False)
+vis.plot_tsunami(h_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
+                    save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
+                    highlight_waves=True)
+
+## Plot initial conditions
+H_initial = np.fromfile(open(data_file.with_name(data_file.name + "_h.bin"), "rb"), dtype=np.double).reshape(Nx,Nx)
+vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
+                    save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
+                    highlight_waves=False)
+vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
+                    save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
+                    highlight_waves=True)
