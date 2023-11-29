@@ -4,6 +4,7 @@ from pathlib import Path
 import visualize as vis
 import time
 import yaml
+import csv
 
 ## Start timer
 start_time = time.time()
@@ -26,7 +27,7 @@ DeltaX = MapSize / Nx # Grid spacing
 
 # Create paths
 path_to_data = current_file_position / config['path_to_data']
-path_to_results = current_file_position/ config['path_to_results']
+path_to_results = current_file_position / config['path_to_results']
 path_to_human_results = path_to_results / "human"
 path_to_data.mkdir(parents=True, exist_ok=True)
 path_to_results.mkdir(parents=True, exist_ok=True)
@@ -36,6 +37,7 @@ path_to_human_results.mkdir(parents=True, exist_ok=True)
 data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}"
 solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.bin"
 solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.txt"
+table_results_csv = path_to_human_results /f"table_results.csv"
 if run_tag != '':
     solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.bin"
     solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.txt"
@@ -58,9 +60,16 @@ hvt = np.zeros((Nx,Nx))
 ## Compute the solution
 Tn = 0 # Current time
 n_steps = 0 # Time step\
-fast = False
-while Tn < Tend:
+fast = True
 
+## Get initialization time
+initialization_time = time.time() - start_time
+
+##Start loop time
+start_loop_time = time.time()
+
+## While loop -----------------------------------------------------------------------------------------------
+while Tn < Tend:
     # Calculate the time step
     under_root = ((np.maximum(np.abs(hu/h + np.sqrt(G*h)), np.abs(hu/h - np.sqrt(G*h))))**2 +
                     (np.maximum(np.abs(hv/h + np.sqrt(G*h)), np.abs(hv/h - np.sqrt(G*h))))**2)
@@ -124,6 +133,10 @@ while Tn < Tend:
     #Update time
     Tn += dT
     n_steps += 1
+## End while loop -------------------------------------------------------------------------------------------
+
+## Stop loop timer
+loop_time_elapsed = time.time() - start_loop_time
 
 ## Save the results
 # Save solution to disk
@@ -148,18 +161,25 @@ flops = ops / time_elapsed
 old_ops = n_steps * (15 + 2 + 11 + 30 + 30 + 1) * Nx ** 2
 old_flops = old_ops / time_elapsed
 
-time_str = f'Time to compute solution: {time_elapsed} seconds'
+global_time_str = f'Global time to compute solution: {time_elapsed} seconds'
+initialization_time_str = f'Time to initialize solution: {initialization_time} seconds'
+loop_time_str = f'Time to compute solution: {loop_time_elapsed} seconds'
 old_gflops_str = f'Average performance (old): {old_flops / 1.0e9} gflops'
 new_gflops_str = f'Average performance (new): {flops / 1.0e9} gflops'
 
-print(time_str)
+print(global_time_str)
+print(initialization_time_str)
+print(loop_time_str)
+
 print(old_gflops_str)
 print(new_gflops_str)
 
 # Save solution to txt file
 with open(solution_txt, 'w') as f:
     f.write(solution_file.stem.__str__() + '\n')
-    f.write(time_str + '\n')
+    f.write(global_time_str + '\n')
+    f.write(initialization_time_str + '\n')
+    f.write(loop_time_str + '\n')
     f.write(old_gflops_str + '\n')
     f.write(new_gflops_str + '\n\n')
 
@@ -190,3 +210,20 @@ vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions',
 vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
                     save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
                     highlight_waves=True)
+
+## Output the data to csv file
+data_row = [(solution_file.stem, run_tag, number_of_processes, Nx, MapSize, 
+             DeltaX, Tend, n_steps, old_ops, ops, time_elapsed, initialization_time, 
+             loop_time_elapsed, 0)]
+
+with open(table_results_csv, 'a') as f:
+
+    writer = csv.writer(f)
+    # If the csv file is empty, write the header
+    if f.tell() == 0:
+        writer.writerow(('name', 'tag', 'N_processes', 'Nx', 'map_size', 
+                        'dx', 'Tend', 'N_time_steps', 'old_N_operations', 
+                        'N_operations', 'total_time', 'initialization_time', 
+                        'loop_time', 'reconstruction_time'))
+        
+    writer.writerows(data_row)

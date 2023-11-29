@@ -6,13 +6,14 @@ import time
 import yaml
 import sys
 import visualize as vis
+import csv
 
 ## Import MPI
 from mpi4py import MPI
 
 ## Set DEBUG flag
 DEBUG = False
-PLOT_CARTESIAN_GRID = False
+PLOT_CARTESIAN_GRID = True
 
 ## Start timer
 start_time = time.time()
@@ -45,6 +46,7 @@ path_to_human_results.mkdir(parents=True, exist_ok=True)
 data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}"
 solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.bin"
 solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.txt"
+table_results_csv = path_to_human_results /f"table_results.csv"
 if run_tag != '':
     solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.bin"
     solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.txt"
@@ -114,17 +116,18 @@ if DEBUG:
           - north: {north} - south: {south} - left: {left} - right: {right}""")
 
 
-# Get lists of values from all processes
-matrix_slices_array = cartesian2d.gather(matrix_slices, root=0)
-cart_coords_array = cartesian2d.gather(cart_coords, root=0)
-ghost_corrected_local_offset_array = cartesian2d.gather(ghost_corrected_local_offset, root=0)
-local_size_array = cartesian2d.gather(local_size, root=0)
-n_ghosts_array = cartesian2d.gather(ghosts, root=0)
+if PLOT_CARTESIAN_GRID:
+    # Get lists of values from all processes
+    matrix_slices_array = cartesian2d.gather(matrix_slices, root=0)
+    cart_coords_array = cartesian2d.gather(cart_coords, root=0)
+    ghost_corrected_local_offset_array = cartesian2d.gather(ghost_corrected_local_offset, root=0)
+    local_size_array = cartesian2d.gather(local_size, root=0)
+    n_ghosts_array = cartesian2d.gather(ghosts, root=0)
 
-if PLOT_CARTESIAN_GRID and rank==0:
-    vis.cartesian_grid(MapSize, Nx, dimensions_cartesian2d, local_size_array, matrix_slices_array,
-                       n_ghosts_array, cart_coords_array, ghost_corrected_local_offset_array, 
-                       cartesian_grid_plot_file)
+    if rank==0:
+        vis.cartesian_grid(MapSize, Nx, dimensions_cartesian2d, local_size_array, matrix_slices_array,
+                        n_ghosts_array, cart_coords_array, ghost_corrected_local_offset_array, 
+                        cartesian_grid_plot_file)
 
 ## Load the data
 # Initial conditions
@@ -150,7 +153,11 @@ idx_j = [slice(1, local_size[1]-1), slice(2, local_size[1]), slice(0, local_size
 Tn = 0 # Current time
 n_steps = 0 # Time step\
 
-#sys.exit('STOP')
+## Get initialization time
+initialization_time = time.time() - start_time
+
+## Start loop timer
+start_loop_time = time.time()
 
 ## While loop -----------------------------------------------------------------------------------------------
 print('START COMPUTATION') if rank == 0 else None
@@ -188,6 +195,7 @@ while Tn < Tend:
 
     # Copy solution to temporary variables
     ht = h.copy()
+    #h = np.empty_like(ht)
     hut = hu.copy()
     hvt = hv.copy()
 
@@ -259,6 +267,12 @@ while Tn < Tend:
 print('END OF COMPUTATION') if rank == 0 else None
 ## End while loop -------------------------------------------------------------------------------------------
 
+## Stop loop timer
+loop_time_elapsed = time.time() - start_loop_time
+
+## Start reconstruction timer
+start_reconstruction_time = time.time()
+
 ## Saving the results
 # Gather the results back to the root process
 shift_i_due_to_ghosts = 0 if cart_coords[0] == 0 else 1
@@ -284,12 +298,23 @@ if rank == 0:
     if DEBUG:
         print(f'H.shape: {H_transposed.shape} - H.dtype: {H_transposed.dtype}') 
 
-    ## Stop timer
+    ## Stop timers
+    # Stop reconstruction timer
+    reconstruction_time_elapsed = time.time() - start_reconstruction_time
+    # Stop global timer
     time_elapsed = time.time() - start_time
-    time_str = f'Time to compute solution: {time_elapsed} seconds'
-    print(time_str)
+    # Communicate timers
 
-    ## Calcualte gflops
+    global_time_str = f'Global time to compute solution: {time_elapsed} seconds'
+    initialization_time_str = f'Time to initialize solution: {initialization_time} seconds'
+    loop_time_str = f'Time to compute solution: {loop_time_elapsed} seconds'
+    reconstruction_time_str = f'Time to reconstruct solution: {reconstruction_time_elapsed} seconds'
+    print(global_time_str)
+    print(initialization_time_str)
+    print(loop_time_str)
+    print(reconstruction_time_str)
+
+    ## Calculate gflops
     calc_dT = 15
     check_T_Tend = 2
     n_calc_h_per_cell = 11
@@ -313,7 +338,10 @@ if rank == 0:
     ## Save solution to txt file
     with open(solution_txt, 'w') as f:
         f.write(solution_file.stem.__str__() + '\n')
-        f.write(time_str + '\n')
+        f.write(global_time_str + '\n')
+        f.write(initialization_time_str + '\n')
+        f.write(loop_time_str + '\n')
+        f.write(reconstruction_time_str + '\n')
         f.write(old_gflops_str + '\n')
         f.write(new_gflops_str + '\n\n')
 
@@ -344,3 +372,20 @@ if rank == 0:
     vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
                      save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
                      highlight_waves=True)
+    
+    ## Output the data to csv file
+    data_row = [(solution_file.stem, run_tag, number_of_processes, Nx, MapSize, 
+             DeltaX, Tend, n_steps, old_ops, ops, time_elapsed, initialization_time, 
+             loop_time_elapsed, reconstruction_time_elapsed)]
+
+    with open(table_results_csv, 'a') as f:
+
+        writer = csv.writer(f)
+        # If the csv file is empty, write the header
+        if f.tell() == 0:
+            writer.writerow(('name', 'tag', 'N_processes', 'Nx', 'map_size', 
+                            'dx', 'Tend', 'N_time_steps', 'old_N_operations', 
+                            'N_operations', 'total_time', 'initialization_time', 
+                            'loop_time', 'reconstruction_time'))
+            
+        writer.writerows(data_row)

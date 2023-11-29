@@ -147,7 +147,7 @@ def plot_tsunami_from_file(path_file, **plot_kwargs):
 def cartesian_grid(map_size, nx, dimensions_cartesian2d, local_size_array, slices_array, n_ghosts_array, cart_coords_array, ghost_corrected_offset_array, save_path): 
 
     size = dimensions_cartesian2d[0] * dimensions_cartesian2d[1]
-    print(f"Plotting cartesian grid size={size}: ", flush=True, end='')
+    #print(f"Plotting cartesian grid (size={size}): ", flush=True, end='')
 
     height_ratios = np.ones(dimensions_cartesian2d[0], dtype=np.int32)
     width_ratios = np.ones(dimensions_cartesian2d[1], dtype=np.int32)
@@ -209,9 +209,9 @@ def cartesian_grid(map_size, nx, dimensions_cartesian2d, local_size_array, slice
         ax.set_xlabel(f'West-East [km]\n gcol {col_index_ghost} \n {xrange}', labelpad=1, fontsize=10)
         ax.set_ylabel(f'North-South [km]\n grow {row_index_ghost} \n {yrange}', labelpad=1, fontsize=10)
         ax.set_title(f'rank: {i_ax}\ncoord: {cart_coords_array[i_ax]}', fontweight='bold', fontsize=12)
-        print(f' {i_ax+1} ', flush=True, end='')
+        #print(f' {i_ax+1} ', flush=True, end='')
 
     #Save the plot
     plt.tight_layout()
-    print(f'\nSaving cartesian grid plot: {save_path.name}')
+    print(f'Saving cartesian grid plot (size={size}): {save_path.name}')
     fig.savefig(save_path, format='pdf')
