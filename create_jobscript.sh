@@ -18,6 +18,7 @@ fi
 
 NUMBER_OF_NODES=$(yaml ${config_file} "['number_of_nodes']")
 NUMBER_OF_CPUS_PER_TASK=$(yaml ${config_file} "['number_of_cpus_per_task']")
+RUNTIME=$(yaml ${config_file} "['runtime']")
 echo Number of processes: $NUMBER_OF_PROCESSES
 echo Number of nodes: $NUMBER_OF_NODES
 echo Number of cpus per task: $NUMBER_OF_CPUS_PER_TASK
@@ -37,7 +38,7 @@ echo "#SBATCH --reservation phys-743" >> tsunami.job
 echo "#SBATCH --job-name=tsunami${TAG_str}" >> tsunami.job
 echo "#SBATCH --output=results/output/tsunami${TAG_str}_ntasks${NUMBER_OF_PROCESSES}_nodes${NUMBER_OF_NODES}_ncpt${NUMBER_OF_CPUS_PER_TASK}_nx${NX}.out" >> tsunami.job
 echo "#SBATCH --error=results/output/tsunami${TAG_str}_ntasks${NUMBER_OF_PROCESSES}_nodes${NUMBER_OF_NODES}_ncpt${NUMBER_OF_CPUS_PER_TASK}_nx${NX}.err" >> tsunami.job
-echo "#SBATCH --time 00:20:00" >> tsunami.job
+echo "#SBATCH --time $RUNTIME" >> tsunami.job
 echo "#SBATCH --cpus-per-task $NUMBER_OF_CPUS_PER_TASK" >> tsunami.job
 echo "#SBATCH --ntasks $NUMBER_OF_PROCESSES" >> tsunami.job
 echo "#SBATCH --nodes $NUMBER_OF_NODES" >> tsunami.job
@@ -53,7 +54,7 @@ then
     echo "srun python3 python/compute.py" >> tsunami.job
 else
     echo "Running with MPI"
-    if [[ NUMBER_OF_NODES -ge 2 ]]; then
+    if [[ $NUMBER_OF_NODES -ge 2 ]]; then
         echo "#SBATCH --qos=parallel" >> tsunami.job
     fi
     echo "source parallel-venv/bin/activate" >> tsunami.job

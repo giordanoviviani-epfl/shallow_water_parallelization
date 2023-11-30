@@ -16,5 +16,6 @@ path_to_results: "../results"
 number_of_processes: 18 # Number of processes to use in the simulation (n tasks)
 number_of_nodes: 1 # Number of nodes to use in the simulation (n nodes)
 number_of_cpus_per_task: 1 # Number of cpus per task to use in the simulation (n cpus per task)
+runtime: 00:40:00
 run_tag: ""
 
