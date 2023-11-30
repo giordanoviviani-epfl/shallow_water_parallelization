@@ -11,9 +11,10 @@ import csv
 ## Import MPI
 from mpi4py import MPI
 
-## Set DEBUG flag
+## Set DEBUG and PLOTS flag
 DEBUG = False
 PLOT_CARTESIAN_GRID = False
+PLOT_TSUNAMI = False
 
 ## Start timer
 start_time = time.time()
@@ -196,10 +197,18 @@ while Tn < Tend:
     print(f'{n_steps:04d} - Computing T: {Tn + dT} ({100 * (Tn + dT) / Tend}%) - dT: {dT} hr - exc. time {time.time() - start_time}') if (rank==0) and (n_steps%50==0) else None
 
     # Copy solution to temporary variables
-    ht = h.copy()
+    #ht = h.copy()
     #h = np.empty_like(ht)
-    hut = hu.copy()
-    hvt = hv.copy()
+    #hut = hu.copy()
+    #hvt = hv.copy()
+    ht = h
+    del h
+    hut = hu
+    del hu
+    hvt = hv
+    del hv
+
+    h, hu, hv = np.zeros_like(ht), np.zeros_like(hut), np.zeros_like(hvt)
 
     # Force boundary conditions
     for hh in [ht, hut, hvt]:
@@ -358,22 +367,23 @@ if rank == 0:
         f.write(f'Data file: {data_file.stem}\n')
     
     ## Plot final conditions
-    Topology = np.fromfile(open(path_to_data / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
-    vis.plot_tsunami(H_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
-                     save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
-                     highlight_waves=False, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
-    vis.plot_tsunami(H_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
-                     save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
-                     highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
+    if PLOT_TSUNAMI:
+        Topology = np.fromfile(open(path_to_data / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
+        vis.plot_tsunami(H_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
+                        save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
+                        highlight_waves=False, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
+        vis.plot_tsunami(H_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
+                        save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
+                        highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
 
-    ## Plot initial conditions
-    H_initial = np.fromfile(open(data_file.with_name(data_file.name+ "_h.bin"), "rb"), dtype=np.double).reshape(Nx,Nx)
-    vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
-                     save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
-                     highlight_waves=False, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
-    vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
-                     save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
-                     highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
+        ## Plot initial conditions
+        H_initial = np.fromfile(open(data_file.with_name(data_file.name+ "_h.bin"), "rb"), dtype=np.double).reshape(Nx,Nx)
+        vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
+                        save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
+                        highlight_waves=False, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
+        vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
+                        save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
+                        highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
     
     ## Output the data to csv file
     data_row = [(solution_file.stem, run_tag, number_of_processes, number_of_nodes, number_of_cpus_per_task, 

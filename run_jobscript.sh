@@ -51,14 +51,14 @@ if [[ $NUMBER_OF_PROCESSES -eq 1 ]]
 then
     echo "Running serial code"
     echo "source parallel-venv/bin/activate" >> tsunami.job
-    echo "srun python3 python/compute.py" >> tsunami.job
+    echo "srun python3 python/compute_profiling.py" >> tsunami.job
 else
     echo "Running with MPI"
     if [[ $NUMBER_OF_NODES -ge 2 ]]; then
         echo "#SBATCH --qos=parallel" >> tsunami.job
     fi
     echo "source parallel-venv/bin/activate" >> tsunami.job
-    echo "srun python3 python/compute_mpi.py" >> tsunami.job
+    echo "srun python3 python/compute_mpi_profiling.py" >> tsunami.job
 fi
 
 sbatch tsunami.job

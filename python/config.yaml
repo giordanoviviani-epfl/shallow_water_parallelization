@@ -9,13 +9,13 @@
 
 G: 127267.2000 
 MapSize: 500 
-Nx: 8001 
+Nx: 2001 
 Tend: 0.2 
 path_to_data: "../data"
 path_to_results: "../results"
-number_of_processes: 18 # Number of processes to use in the simulation (n tasks)
-number_of_nodes: 1 # Number of nodes to use in the simulation (n nodes)
+number_of_processes: 529 # Number of processes to use in the simulation (n tasks)
+number_of_nodes: 15 # Number of nodes to use in the simulation (n nodes)
 number_of_cpus_per_task: 1 # Number of cpus per task to use in the simulation (n cpus per task)
-runtime: 00:40:00
-run_tag: ""
+runtime: 00:20:00
+run_tag: "nocopy_dToptimized"
 

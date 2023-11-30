@@ -88,13 +88,21 @@ while Tn < Tend:
         dT = Tend - Tn
 
     # Report Status
-    if n_steps % 10 == 0:
+    if n_steps % 50 == 0:
         print(f'{n_steps:04d} - Computing T: {Tn + dT} ({100 * (Tn + dT) / Tend}%) - dT: {dT} hr - exc. time {time.time() - start_time}')
 
     # Copy solution to temporary variables
-    ht = h.copy()
-    hut = hu.copy()
-    hvt = hv.copy()
+    #ht = h.copy()
+    #hut = hu.copy()
+    #hvt = hv.copy()
+    ht = h
+    del h
+    hut = hu
+    del hu
+    hvt = hv
+    del hv
+
+    h, hu, hv = np.zeros_like(ht), np.zeros_like(hut), np.zeros_like(hvt)
 
     # Force boundary conditions
     for hh in [ht, hut, hvt]:
@@ -214,7 +222,7 @@ vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions',
                     highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
 
 ## Output the data to csv file
-data_row = [(solution_file.stem, run_tag, number_of_processes, number_of_nodes, number_cpus_per_task, Nx, MapSize, 
+data_row = [(solution_file.stem, run_tag, number_of_processes, number_of_nodes, number_of_cpus_per_task, Nx, MapSize, 
              DeltaX, Tend, n_steps, old_ops, ops, time_elapsed, initialization_time, 
              loop_time_elapsed, 0)]
 
