@@ -22,6 +22,8 @@ MapSize = config['MapSize']
 Nx = config['Nx']
 Tend = config['Tend']
 number_of_processes = config['number_of_processes']
+number_of_nodes = config['number_of_nodes']
+number_of_cpus_per_task = config['number_of_cpus_per_task']
 run_tag = config['run_tag']
 DeltaX = MapSize / Nx # Grid spacing
 
@@ -35,12 +37,12 @@ path_to_human_results.mkdir(parents=True, exist_ok=True)
 
 # Create filenames
 data_file = path_to_data / f"Data_nx{Nx}_{MapSize}km_T{Tend}"
-solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.bin"
-solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_h.txt"
+solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}_h.bin"
+solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}_h.txt"
 table_results_csv = path_to_human_results /f"table_results.csv"
 if run_tag != '':
-    solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.bin"
-    solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_{run_tag}_h.txt"
+    solution_file = path_to_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}_{run_tag}_h.bin"
+    solution_txt = path_to_human_results /f"Solution_nx{Nx}_{MapSize}km_T{str(Tend).split('.')[1]}_np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}_{run_tag}_h.txt"
 
 ## Load the data
 # Initial conditions
@@ -197,22 +199,22 @@ with open(solution_txt, 'w') as f:
 Topology = np.fromfile(open(path_to_data / f"Fig_nx{Nx}_{MapSize}km_Typography.bin", 'rb'), dtype=np.double).reshape((Nx, Nx))
 vis.plot_tsunami(h_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
                     save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
-                    highlight_waves=False)
+                    highlight_waves=False, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
 vis.plot_tsunami(h_transposed, MapSize, Nx, Topology, title='Result of the simulation', 
                     save=True, save_path=path_to_human_results, save_name='Result', tag=run_tag,
-                    highlight_waves=True)
+                    highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
 
 ## Plot initial conditions
 H_initial = np.fromfile(open(data_file.with_name(data_file.name + "_h.bin"), "rb"), dtype=np.double).reshape(Nx,Nx)
 vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
                     save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
-                    highlight_waves=False)
+                    highlight_waves=False, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
 vis.plot_tsunami(H_initial, MapSize, Nx, Topology, title='Initial conditions', 
                     save=True, save_path=path_to_human_results, save_name='Init', tag=run_tag,
-                    highlight_waves=True)
+                    highlight_waves=True, save_spec=f"np{number_of_processes}_nn{number_of_nodes}_ncpt{number_of_cpus_per_task}")
 
 ## Output the data to csv file
-data_row = [(solution_file.stem, run_tag, number_of_processes, Nx, MapSize, 
+data_row = [(solution_file.stem, run_tag, number_of_processes, number_of_nodes, number_cpus_per_task, Nx, MapSize, 
              DeltaX, Tend, n_steps, old_ops, ops, time_elapsed, initialization_time, 
              loop_time_elapsed, 0)]
 
@@ -221,9 +223,9 @@ with open(table_results_csv, 'a') as f:
     writer = csv.writer(f)
     # If the csv file is empty, write the header
     if f.tell() == 0:
-        writer.writerow(('name', 'tag', 'N_processes', 'Nx', 'map_size', 
-                        'dx', 'Tend', 'N_time_steps', 'old_N_operations', 
-                        'N_operations', 'total_time', 'initialization_time', 
-                        'loop_time', 'reconstruction_time'))
+        writer.writerow(('name', 'tag', 'N_processes', 'N_nodes', 'N_cpus_per_task', 'Nx', 'map_size', 
+                            'dx', 'Tend', 'N_time_steps', 'old_N_operations', 
+                            'N_operations', 'total_time', 'initialization_time', 
+                            'loop_time', 'reconstruction_time'))
         
     writer.writerows(data_row)

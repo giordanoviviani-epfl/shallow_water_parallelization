@@ -8,7 +8,7 @@ from matplotlib.colors import LightSource
 import matplotlib.pyplot as plt
 
 def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_waves=False, cstride=20, rstride=20,
-                  save=False, save_path=None, save_name='Result', tag='', return_fig=False):
+                  save=False, save_path=None, save_name='Result', save_spec='', tag='', return_fig=False):
 
     fontsize = 12
     mag_factor_z = 10
@@ -111,9 +111,10 @@ def plot_tsunami(water_level, map_size, nx, topography, title='', highlight_wave
     plt.draw()
 
     if save: 
+        save_name +=f"_nx{nx}_{map_size}km_{save_spec}" 
         if tag != '':
             save_name += f'_{tag}'
-        save_name += f"_{map_size}km_nx{nx}_cstride{cstride}_rstride{rstride}"
+        save_name += f"_cstride{cstride}_rstride{rstride}"
         if highlight_waves:
             save_name += '_highlight_waves'
         save_name += '.png'
