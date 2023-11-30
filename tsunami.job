@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --account phys-743
+#SBATCH --reservation phys-743
+#SBATCH --job-name=tsunami
+#SBATCH --output=results/output/tsunami_ntasks18_nodes1_ncpt1_nx8001.out
+#SBATCH --error=results/output/tsunami_ntasks18_nodes1_ncpt1_nx8001.err
+#SBATCH --time 00:20:00
+#SBATCH --cpus-per-task 1
+#SBATCH --ntasks 18
+#SBATCH --nodes 1
+#SBATCH --mem-per-cpu 8000
+source parallel-venv/bin/activate
+srun python3 python/compute_mpi.py
